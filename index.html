@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEURON — Online Compiler</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
@@ -15,162 +15,226 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/ruby/ruby.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/rust/rust.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/lua/lua.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/r/r.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/perl/perl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/haskell/haskell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/erlang/erlang.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --void:#04050a;--deep:#080c14;--panel:#0d1220;--card:#111828;--hover:#17202e;
-  --border:#1c2540;--c1:#00e5ff;--c2:#ff2d6d;--c3:#a259ff;
-  --gold:#ffc93c;--green:#00ff88;--txt:#dde4f0;--mid:#6b7a99;--dim:#2e3a55;
-  --fnt:'JetBrains Mono',monospace;--display:'Syne',sans-serif;
+  --bg:#060810;--s1:#0b0f1c;--s2:#0f1527;--s3:#141b30;--s4:#1a2240;
+  --b1:#1e2844;--b2:#253060;
+  --c1:#00d4ff;--c2:#ff3366;--c3:#7c3aed;--c4:#10b981;--c5:#f59e0b;
+  --c1g:rgba(0,212,255,.12);--c2g:rgba(255,51,102,.12);--c3g:rgba(124,58,237,.12);
+  --tx:#e2e8f8;--tm:#7a8ab0;--td:#2d3a5a;
+  --fnt:'JetBrains Mono',monospace;--hd:'Syne',sans-serif;
+  --r:8px;
 }
-html,body{height:100%;background:var(--void);color:var(--txt);font-family:var(--fnt);overflow:hidden}
-body::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);
-  background-size:56px 56px;
-}
-#app{position:relative;z-index:1;display:grid;grid-template-rows:58px 1fr;height:100vh;overflow:hidden}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--fnt)}
 
-/* HEADER */
-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;background:rgba(8,12,20,.97);
-  border-bottom:1px solid var(--border);backdrop-filter:blur(20px);
-  position:relative;overflow:hidden;flex-shrink:0;
+/* ANIMATED BACKGROUND */
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.6}
+.grid-overlay{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(var(--b1) 1px,transparent 1px),linear-gradient(90deg,var(--b1) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.35;
 }
-header::after{
-  content:'';position:absolute;bottom:0;left:-100%;right:-100%;height:1px;
-  background:linear-gradient(90deg,transparent,var(--c1) 40%,var(--c2) 60%,transparent);
-  animation:hbar 5s linear infinite;
-}
-@keyframes hbar{0%{transform:translateX(-50%)}100%{transform:translateX(50%)}}
 
-.logo{display:flex;align-items:center;gap:10px}
-.logo-hex{
-  width:32px;height:32px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--c1),var(--c3));
-  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-size:14px;font-weight:800;color:#000;
-  box-shadow:0 0 18px rgba(0,229,255,.35);
+#app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh}
+
+/* ━━━ HEADER ━━━ */
+#hdr{
+  display:flex;align-items:center;gap:0;height:56px;flex-shrink:0;
+  background:rgba(9,13,28,.97);border-bottom:1px solid var(--b1);
+  backdrop-filter:blur(20px);position:relative;overflow:hidden;
 }
-.logo-name{
-  font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:5px;
-  background:linear-gradient(90deg,var(--c1),var(--c2));
+#hdr::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,var(--c1g) 0%,transparent 30%,transparent 70%,var(--c2g) 100%);
+  pointer-events:none;
+}
+#hdr::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--c1),var(--c3),var(--c2),transparent);
+  opacity:.8;
+}
+
+/* LOGO */
+.logo-area{
+  display:flex;align-items:center;gap:12px;padding:0 20px;
+  border-right:1px solid var(--b1);height:100%;
+}
+.logo-mark{
+  position:relative;width:36px;height:36px;flex-shrink:0;
+}
+.logo-mark svg{width:100%;height:100%}
+.logo-txt{
+  font-family:var(--hd);font-size:17px;font-weight:800;letter-spacing:5px;
+  background:linear-gradient(135deg,var(--c1) 0%,var(--c3) 50%,var(--c2) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
-.logo-tag{font-size:9px;color:var(--dim);letter-spacing:3px;display:block;margin-top:-4px}
+.logo-sub{font-size:8px;color:var(--td);letter-spacing:3px;text-transform:uppercase;margin-top:-3px}
 
-.hcenter{display:flex;align-items:center;gap:8px}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pd 2s ease-in-out infinite}
-@keyframes pd{0%,100%{opacity:1}50%{opacity:.3}}
-.live-txt{font-size:10px;color:var(--mid);letter-spacing:2px;text-transform:uppercase}
+/* STATUS */
+.status-area{
+  display:flex;align-items:center;gap:8px;padding:0 20px;
+  border-right:1px solid var(--b1);height:100%;
+}
+.pulse{
+  width:8px;height:8px;border-radius:50%;background:var(--c4);
+  box-shadow:0 0 0 0 rgba(16,185,129,.4);
+  animation:pulseAnim 2s ease-in-out infinite;
+}
+@keyframes pulseAnim{0%{box-shadow:0 0 0 0 rgba(16,185,129,.4)}70%{box-shadow:0 0 0 6px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+.status-txt{font-size:10px;color:var(--tm);letter-spacing:2px;text-transform:uppercase}
+.api-tag{font-size:9px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:2px 8px;color:var(--c1);letter-spacing:1px}
 
-.hactions{display:flex;align-items:center;gap:9px}
+/* LANG PICKER */
+.lang-area{display:flex;align-items:center;padding:0 16px;gap:8px;height:100%;position:relative}
+.lang-btn{
+  display:flex;align-items:center;gap:10px;
+  background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);
+  padding:7px 14px;cursor:pointer;color:var(--tx);
+  font-family:var(--fnt);font-size:13px;transition:all .2s;
+  min-width:160px;position:relative;overflow:hidden;
+}
+.lang-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--c1g),transparent);opacity:0;transition:opacity .2s}
+.lang-btn:hover::before{opacity:1}
+.lang-btn:hover{border-color:var(--c1);box-shadow:0 0 16px rgba(0,212,255,.15)}
+.lang-btn-arrow{margin-left:auto;color:var(--td);transition:transform .25s;font-size:10px}
+.lang-area.open .lang-btn-arrow{transform:rotate(180deg)}
+.lang-color-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 
-/* Language picker */
-.lpick{position:relative}
-.lbtn{
+.lang-drop{
+  position:absolute;top:calc(100% + 4px);left:16px;
+  background:var(--s1);border:1px solid var(--b1);border-radius:12px;
+  z-index:500;display:none;width:260px;
+  box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(0,212,255,.05);
+  overflow:hidden;
+}
+.lang-area.open .lang-drop{display:block}
+.lang-drop-search{
   display:flex;align-items:center;gap:8px;
-  background:var(--card);border:1px solid var(--border);border-radius:7px;
-  padding:7px 12px;cursor:pointer;color:var(--txt);
-  font-family:var(--fnt);font-size:13px;transition:all .2s;min-width:150px;
+  padding:10px 14px;border-bottom:1px solid var(--b1);
 }
-.lbtn:hover{border-color:var(--c1);box-shadow:0 0 14px rgba(0,229,255,.1)}
-.larrow{margin-left:auto;color:var(--dim);font-size:10px;transition:transform .2s}
-.lpick.open .larrow{transform:rotate(180deg)}
-.ldrop{
-  position:absolute;top:calc(100% + 6px);left:0;
-  background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  z-index:200;display:none;min-width:205px;
-  max-height:380px;overflow-y:auto;
-  box-shadow:0 24px 60px rgba(0,0,0,.6);
+.lang-drop-search input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--tx);font-family:var(--fnt);font-size:12px;
 }
-.ldrop::-webkit-scrollbar{width:3px}
-.ldrop::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.lpick.open .ldrop{display:block}
-.lopt{
-  display:flex;align-items:center;gap:10px;padding:10px 13px;
-  cursor:pointer;transition:background .12s;
-  border-left:2px solid transparent;font-size:12px;
+.lang-drop-search input::placeholder{color:var(--td)}
+.lang-list{max-height:340px;overflow-y:auto}
+.lang-list::-webkit-scrollbar{width:3px}
+.lang-list::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+.lang-opt{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  cursor:pointer;transition:background .12s;border-left:3px solid transparent;font-size:12px;
 }
-.lopt:hover{background:var(--hover);border-left-color:var(--c1)}
-.lopt.active{background:rgba(0,229,255,.06);border-left-color:var(--c1);color:var(--c1)}
-.lopt-ic{font-size:16px;line-height:1;flex-shrink:0}
-.lopt-nm{flex:1}
-.lopt-vr{font-size:10px;color:var(--dim);letter-spacing:1px}
+.lang-opt:hover{background:var(--s3);border-left-color:var(--c1)}
+.lang-opt.active{background:rgba(0,212,255,.07);border-left-color:var(--c1);color:var(--c1)}
+.lang-opt-ic{font-size:18px;line-height:1;flex-shrink:0;width:24px;text-align:center}
+.lang-opt-nm{flex:1;font-weight:500}
+.lang-opt-vr{font-size:10px;color:var(--td);letter-spacing:1px}
+.lang-cat{padding:6px 14px 4px;font-size:9px;color:var(--td);letter-spacing:3px;text-transform:uppercase;border-top:1px solid var(--b1);margin-top:2px}
 
-.ibtn{
+/* CONTROLS */
+.ctrl-area{display:flex;align-items:center;gap:8px;padding:0 16px;margin-left:auto}
+.kbd-hint{
+  font-size:10px;color:var(--td);border:1px solid var(--b1);border-radius:5px;
+  padding:3px 8px;letter-spacing:1px;display:flex;align-items:center;gap:4px;
+}
+.kbd-hint kbd{font-size:9px;color:var(--tm)}
+.icon-btn{
   width:36px;height:36px;display:flex;align-items:center;justify-content:center;
-  background:var(--card);border:1px solid var(--border);border-radius:7px;
-  cursor:pointer;color:var(--mid);font-size:15px;transition:all .2s;
+  background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);
+  cursor:pointer;color:var(--tm);font-size:15px;transition:all .2s;flex-shrink:0;
 }
-.ibtn:hover{border-color:var(--c2);color:var(--c2);box-shadow:0 0 12px rgba(255,45,109,.1)}
-.ibtn.copy:hover{border-color:var(--c1);color:var(--c1);box-shadow:0 0 12px rgba(0,229,255,.1)}
+.icon-btn:hover{border-color:var(--c2);color:var(--c2);box-shadow:0 0 12px rgba(255,51,102,.15);background:var(--s3)}
+.icon-btn.ic-copy:hover{border-color:var(--c1);color:var(--c1);box-shadow:0 0 12px rgba(0,212,255,.15)}
+.icon-btn.ic-share:hover{border-color:var(--c5);color:var(--c5);box-shadow:0 0 12px rgba(245,158,11,.15)}
+.icon-btn[title="Toggle Theme"]:hover{border-color:var(--c3);color:var(--c3)}
 
-.kbdhint{font-size:10px;color:var(--dim);border:1px solid var(--border);border-radius:4px;padding:2px 7px;letter-spacing:1px;white-space:nowrap}
-
-.runbtn{
-  display:flex;align-items:center;gap:8px;
-  background:linear-gradient(135deg,var(--c1),var(--c3));
-  border:none;border-radius:7px;padding:8px 18px;
-  color:#000;font-family:var(--display);font-size:12px;font-weight:700;
+.run-btn{
+  display:flex;align-items:center;gap:9px;
+  background:linear-gradient(135deg,var(--c1) 0%,var(--c3) 100%);
+  border:none;border-radius:var(--r);padding:9px 20px;
+  color:#fff;font-family:var(--hd);font-size:12px;font-weight:700;
   letter-spacing:3px;text-transform:uppercase;cursor:pointer;
-  transition:all .2s;position:relative;overflow:hidden;
+  transition:all .25s;position:relative;overflow:hidden;flex-shrink:0;
 }
-.runbtn::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,.15);opacity:0;transition:opacity .2s}
-.runbtn:hover::before{opacity:1}
-.runbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,229,255,.3)}
-.runbtn:active{transform:translateY(0)}
-.runbtn.running{background:linear-gradient(135deg,var(--c2),var(--c3));pointer-events:none}
-.runbtn svg{width:15px;height:15px;flex-shrink:0}
-.spin{width:15px;height:15px;border:2px solid rgba(0,0,0,.25);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
-.runbtn.running .spin{display:block}
-.runbtn.running .play-ic{display:none}
+.run-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.2),transparent);opacity:0;transition:opacity .2s}
+.run-btn:hover::before{opacity:1}
+.run-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,212,255,.35),0 4px 12px rgba(124,58,237,.2)}
+.run-btn:active{transform:translateY(0)}
+.run-btn.running{background:linear-gradient(135deg,var(--c2),var(--c3));pointer-events:none}
+.run-btn svg{width:16px;height:16px;flex-shrink:0}
+.run-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none;flex-shrink:0}
+.run-btn.running .run-spinner{display:block}
+.run-btn.running .run-icon{display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* WORKSPACE */
-.workspace{display:grid;grid-template-columns:1fr 400px;overflow:hidden;height:100%}
+/* ━━━ MAIN WORKSPACE ━━━ */
+#workspace{
+  display:grid;grid-template-columns:1fr 420px;
+  flex:1;overflow:hidden;min-height:0;
+}
 
-/* EDITOR PANE */
-.epane{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden}
-.ptab{
+/* ━━━ EDITOR PANE ━━━ */
+#editor-pane{
+  display:flex;flex-direction:column;overflow:hidden;
+  border-right:1px solid var(--b1);position:relative;
+}
+
+/* EDITOR TOPBAR */
+.ed-bar{
   display:flex;align-items:center;gap:10px;
-  padding:0 14px;height:38px;
-  background:var(--deep);border-bottom:1px solid var(--border);flex-shrink:0;
+  height:38px;padding:0 14px;flex-shrink:0;
+  background:var(--s1);border-bottom:1px solid var(--b1);
 }
-.mac{display:flex;gap:5px}
-.mac span{width:10px;height:10px;border-radius:50%}
-.mr{background:#ff5f56}.my{background:#ffbd2e}.mg{background:#27c93f}
-.ftab{
-  font-size:12px;color:var(--mid);padding:3px 10px;
-  border:1px solid var(--border);border-bottom:none;border-radius:5px 5px 0 0;
-  background:var(--card);
+.mac-dots{display:flex;gap:5px}
+.mac-dots span{width:11px;height:11px;border-radius:50%}
+.dot-r{background:#ff5f57}.dot-y{background:#ffbd2e}.dot-g{background:#28c840}
+.file-tab{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--tm);padding:4px 12px;
+  background:var(--s3);border:1px solid var(--b1);border-bottom:none;border-radius:6px 6px 0 0;
+  transition:all .2s;cursor:default;
 }
-.ftab.on{color:var(--c1);border-color:rgba(0,229,255,.3)}
-.ptab-r{margin-left:auto;display:flex;align-items:center;gap:5px}
-.fc{display:flex;align-items:center;gap:4px}
-.fb{width:22px;height:22px;border:1px solid var(--border);background:transparent;color:var(--dim);border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.fb:hover{border-color:var(--c1);color:var(--c1)}
-.fv{font-size:11px;color:var(--dim);min-width:20px;text-align:center}
+.file-tab.active{color:var(--c1);border-color:rgba(0,212,255,.25);background:var(--s4)}
+.file-tab-dot{width:6px;height:6px;border-radius:50%;background:var(--c1);opacity:.6}
+.ed-bar-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.font-ctrl{display:flex;align-items:center;gap:3px}
+.font-btn{
+  width:22px;height:22px;border:1px solid var(--b1);background:transparent;
+  color:var(--td);border-radius:4px;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.font-btn:hover{border-color:var(--c1);color:var(--c1)}
+.font-val{font-size:10px;color:var(--td);min-width:22px;text-align:center}
 
-.ew{flex:1;overflow:hidden;position:relative}
-.CodeMirror{height:100% !important;font-family:var(--fnt) !important;font-size:14px;line-height:1.75;background:#04060d !important}
-.CodeMirror-scroll{padding-bottom:30px}
-.CodeMirror-gutters{background:#060912 !important;border-right:1px solid var(--border) !important;min-width:46px}
-.CodeMirror-linenumber{color:var(--dim) !important;padding:0 10px 0 6px}
-.CodeMirror-cursor{border-left:2px solid var(--c1) !important}
-.CodeMirror-activeline-background{background:rgba(0,229,255,.03) !important}
-.CodeMirror-selected{background:rgba(162,89,255,.18) !important}
+/* CODEMIRROR */
+.editor-wrap{flex:1;overflow:hidden;position:relative;min-height:0}
+.CodeMirror{height:100%!important;font-family:var(--fnt)!important;font-size:14px;line-height:1.8;background:#050711!important}
+.CodeMirror-scroll{padding-bottom:40px}
+.CodeMirror-gutters{background:#07091a!important;border-right:1px solid var(--b1)!important;min-width:50px;padding-right:4px}
+.CodeMirror-linenumber{color:var(--td)!important;font-size:12px}
+.CodeMirror-cursor{border-left:2px solid var(--c1)!important;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.CodeMirror-activeline-background{background:rgba(0,212,255,.025)!important}
+.CodeMirror-selected{background:rgba(124,58,237,.2)!important}
+.CodeMirror-matchingbracket{outline:1px solid var(--c1)!important;color:var(--c1)!important;background:rgba(0,212,255,.08)!important}
 
-/* Custom syntax theme */
-.cm-s-neuron span.cm-keyword{color:#ff79c6}
+/* Syntax highlight (dracula-inspired but custom) */
+.cm-s-neuron span.cm-keyword{color:#ff79c6;font-weight:500}
 .cm-s-neuron span.cm-def{color:#50fa7b}
 .cm-s-neuron span.cm-variable{color:#f8f8f2}
 .cm-s-neuron span.cm-variable-2{color:#8be9fd}
+.cm-s-neuron span.cm-variable-3{color:#ffb86c}
 .cm-s-neuron span.cm-string{color:#f1fa8c}
 .cm-s-neuron span.cm-string-2{color:#f1fa8c}
 .cm-s-neuron span.cm-number{color:#bd93f9}
@@ -178,554 +242,951 @@ header::after{
 .cm-s-neuron span.cm-operator{color:#ff79c6}
 .cm-s-neuron span.cm-atom{color:#bd93f9}
 .cm-s-neuron span.cm-meta{color:#f8f8f2}
-.cm-s-neuron span.cm-builtin{color:#8be9fd}
+.cm-s-neuron span.cm-builtin{color:#8be9fd;font-weight:500}
 .cm-s-neuron span.cm-tag{color:#ff79c6}
 .cm-s-neuron span.cm-attribute{color:#50fa7b}
 .cm-s-neuron span.cm-type{color:#8be9fd}
 .cm-s-neuron span.cm-property{color:#66d9e8}
 .cm-s-neuron span.cm-qualifier{color:#50fa7b}
 .cm-s-neuron span.cm-bracket{color:#f8f8f2}
-.cm-s-neuron span.cm-error{color:var(--c2)}
+.cm-s-neuron span.cm-error{color:#ff5555;text-decoration:underline wavy rgba(255,85,85,.5)}
+.cm-s-neuron span.cm-header{color:#bd93f9;font-weight:700}
+.cm-s-neuron span.cm-link{color:#8be9fd;text-decoration:underline}
+.cm-s-neuron span.cm-hr{color:#6272a4}
 
-.sbar{
-  display:flex;align-items:center;gap:12px;
-  padding:0 14px;height:24px;
-  background:rgba(0,229,255,.04);border-top:1px solid rgba(0,229,255,.07);
-  flex-shrink:0;font-size:10px;color:var(--dim);letter-spacing:1px;
+/* STATUS BAR */
+.status-bar{
+  display:flex;align-items:center;gap:0;
+  height:24px;flex-shrink:0;
+  background:rgba(0,212,255,.05);border-top:1px solid rgba(0,212,255,.1);
+  overflow:hidden;
 }
-.sbar-pos{color:var(--c1)}
-.sbar-sep{color:var(--border)}
-
-/* RIGHT PANEL */
-.rpanel{display:flex;flex-direction:column;overflow:hidden;background:var(--deep)}
-
-/* stdin */
-.sinwrap{flex-shrink:0;border-bottom:1px solid var(--border)}
-.sinhead{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 14px;cursor:pointer;user-select:none;
-  font-size:11px;color:var(--mid);letter-spacing:2px;text-transform:uppercase;
+.sb-item{
+  display:flex;align-items:center;gap:6px;
+  padding:0 12px;font-size:10px;color:var(--td);letter-spacing:1px;
+  border-right:1px solid rgba(255,255,255,.04);height:100%;
+  white-space:nowrap;
 }
-.sinhead:hover{background:var(--hover)}
-.sinchev{margin-left:auto;font-size:10px;color:var(--dim);transition:transform .2s}
-.sinwrap.col .sinchev{transform:rotate(-90deg)}
-.sinbody{max-height:110px;overflow:hidden;transition:max-height .25s ease}
-.sinwrap.col .sinbody{max-height:0}
-#stdin{
-  width:100%;background:var(--void);border:none;outline:none;
-  resize:none;color:var(--txt);font-family:var(--fnt);font-size:12px;
-  padding:10px 14px;height:90px;line-height:1.6;border-top:1px solid var(--border);
+.sb-item.accent{color:var(--c1)}
+.sb-item.ok{color:var(--c4)}
+.sb-item.err{color:var(--c2)}
+
+/* ━━━ RIGHT PANEL ━━━ */
+#right-panel{
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--s1);
 }
-#stdin::placeholder{color:var(--dim)}
 
-/* output */
-.outsec{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.outhead{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0;
+/* STDIN */
+.stdin-panel{flex-shrink:0;border-bottom:1px solid var(--b1)}
+.stdin-hdr{
+  display:flex;align-items:center;gap:8px;padding:0 14px;
+  height:36px;cursor:pointer;transition:background .15s;user-select:none;
 }
-.outtitle{font-size:11px;color:var(--mid);letter-spacing:2px;text-transform:uppercase}
-.outacts{display:flex;gap:6px;margin-left:auto}
-.obtn{
-  background:transparent;border:1px solid var(--border);border-radius:5px;
-  color:var(--dim);font-size:10px;padding:3px 9px;cursor:pointer;
-  font-family:var(--fnt);letter-spacing:1px;transition:all .15s;
+.stdin-hdr:hover{background:var(--s2)}
+.stdin-hdr-lbl{font-size:10px;color:var(--tm);letter-spacing:2.5px;text-transform:uppercase;flex:1}
+.stdin-chev{font-size:9px;color:var(--td);transition:transform .2s}
+.stdin-panel.collapsed .stdin-chev{transform:rotate(-90deg)}
+.stdin-body{max-height:120px;overflow:hidden;transition:max-height .28s ease}
+.stdin-panel.collapsed .stdin-body{max-height:0}
+#stdin-ta{
+  width:100%;height:100px;border:none;outline:none;resize:none;
+  background:var(--bg);color:var(--tx);font-family:var(--fnt);font-size:12px;
+  padding:10px 14px;line-height:1.7;border-top:1px solid var(--b1);
 }
-.obtn:hover{border-color:var(--c1);color:var(--c1)}
-.badge{font-size:9px;letter-spacing:1.5px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);color:var(--dim);font-family:var(--fnt)}
-.badge.ok{border-color:var(--green);color:var(--green)}
-.badge.err{border-color:var(--c2);color:var(--c2)}
-.badge.run{border-color:var(--c1);color:var(--c1);animation:bl 1s ease-in-out infinite}
-@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+#stdin-ta::placeholder{color:var(--td)}
 
-.outbody{flex:1;overflow-y:auto;padding:16px;position:relative;min-height:0}
-.outbody::-webkit-scrollbar{width:3px}
-.outbody::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* OUTPUT */
+.out-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.out-hdr{
+  display:flex;align-items:center;gap:8px;padding:0 14px;
+  height:36px;flex-shrink:0;border-bottom:1px solid var(--b1);
+}
+.out-hdr-lbl{font-size:10px;color:var(--tm);letter-spacing:2.5px;text-transform:uppercase;flex:1}
+.out-actions{display:flex;gap:6px}
+.out-btn{
+  background:transparent;border:1px solid var(--b1);border-radius:5px;
+  color:var(--td);font-size:9px;padding:3px 9px;cursor:pointer;
+  font-family:var(--fnt);letter-spacing:1.5px;text-transform:uppercase;transition:all .15s;
+}
+.out-btn:hover{border-color:var(--c1);color:var(--c1)}
+.status-badge{
+  font-size:9px;letter-spacing:1.5px;padding:3px 10px;
+  border-radius:20px;border:1px solid var(--b1);color:var(--td);
+  font-family:var(--fnt);text-transform:uppercase;flex-shrink:0;
+  transition:all .3s;
+}
+.status-badge.running{border-color:var(--c1);color:var(--c1);animation:badgePulse 1s ease-in-out infinite;box-shadow:0 0 10px rgba(0,212,255,.2)}
+.status-badge.success{border-color:var(--c4);color:var(--c4);box-shadow:0 0 10px rgba(16,185,129,.2)}
+.status-badge.error{border-color:var(--c2);color:var(--c2);box-shadow:0 0 10px rgba(255,51,102,.2)}
+.status-badge.warning{border-color:var(--c5);color:var(--c5)}
+@keyframes badgePulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-.ph{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--dim);text-align:center}
-.ph-ic{width:56px;height:56px;background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(162,89,255,.07));border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}
-.ph-t{font-size:11px;letter-spacing:2px;text-transform:uppercase}
-.ph-s{font-size:10px;opacity:.4}
+.out-body{flex:1;overflow-y:auto;position:relative;min-height:0}
+.out-body::-webkit-scrollbar{width:4px}
+.out-body::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
 
-.xov{position:absolute;inset:0;background:rgba(4,5,10,.87);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px;z-index:10}
-.xov.on{display:flex}
-.xring{width:52px;height:52px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--c1);border-right-color:var(--c2);animation:spin .7s linear infinite;box-shadow:0 0 24px rgba(0,229,255,.2)}
-.xlbl{font-size:11px;letter-spacing:3px;color:var(--mid);text-transform:uppercase;animation:bl 1s ease-in-out infinite}
+/* IDLE STATE */
+.idle-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:16px;padding:20px;
+}
+.idle-art{
+  position:relative;width:72px;height:72px;
+  display:flex;align-items:center;justify-content:center;
+}
+.idle-art-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:1px solid var(--b1);
+  animation:rotRing 8s linear infinite;
+}
+.idle-art-ring:nth-child(2){
+  inset:8px;border-color:rgba(0,212,255,.2);
+  animation-direction:reverse;animation-duration:6s;
+}
+.idle-art-ring:nth-child(3){
+  inset:16px;border-color:rgba(124,58,237,.2);
+  animation-duration:4s;
+}
+.idle-art-core{
+  position:relative;z-index:1;font-size:22px;
+  animation:floatCore 3s ease-in-out infinite;
+}
+@keyframes rotRing{to{transform:rotate(360deg)}}
+@keyframes floatCore{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 
-#outpre{font-family:var(--fnt);font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-all;display:none}
-#outpre.on{display:block}
+.idle-txt{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--td)}
+.idle-sub{font-size:10px;color:var(--td);opacity:.5;text-align:center;line-height:1.6}
+.idle-shortcuts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.shortcut-pill{
+  font-size:10px;color:var(--td);border:1px solid var(--b1);
+  border-radius:20px;padding:3px 10px;letter-spacing:1px;
+}
 
-.stats{display:flex;align-items:center;gap:16px;padding:8px 14px;border-top:1px solid var(--border);background:var(--panel);flex-shrink:0}
-.stat{display:flex;align-items:center;gap:6px;font-size:11px}
-.sl{color:var(--dim)}
-.sv{color:var(--c1)}
-.sv.e{color:var(--c2)}
+/* EXEC OVERLAY */
+.exec-overlay{
+  position:absolute;inset:0;background:rgba(5,7,17,.9);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px;z-index:10;
+}
+.exec-overlay.active{display:flex}
+.exec-ring-wrap{position:relative;width:64px;height:64px}
+.exec-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:2px solid var(--b1);
+  border-top-color:var(--c1);
+  animation:spin .8s linear infinite;
+}
+.exec-ring-2{
+  position:absolute;inset:8px;border-radius:50%;
+  border:2px solid transparent;
+  border-right-color:var(--c2);
+  animation:spin .5s linear infinite reverse;
+}
+.exec-ring-core{
+  position:absolute;inset:20px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,.2),transparent);
+  animation:coreGlow 1s ease-in-out infinite alternate;
+}
+@keyframes coreGlow{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.3);opacity:1}}
+.exec-label{font-size:11px;letter-spacing:4px;color:var(--tm);text-transform:uppercase;animation:pulse2 1.5s ease-in-out infinite}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* TOAST */
+/* OUTPUT PRE */
+#out-pre{
+  display:none;font-family:var(--fnt);font-size:13px;line-height:1.8;
+  white-space:pre-wrap;word-break:break-all;padding:16px;
+}
+#out-pre.visible{display:block}
+#out-pre.stdout{color:var(--tx)}
+#out-pre.stderr{color:var(--c2)}
+#out-pre.info{color:var(--c5)}
+
+/* STATS BAR */
+.stats-bar{
+  display:flex;align-items:center;gap:0;
+  height:32px;flex-shrink:0;border-top:1px solid var(--b1);background:var(--s2);
+}
+.stat-item{
+  display:flex;align-items:center;gap:6px;
+  padding:0 12px;height:100%;border-right:1px solid var(--b1);
+  font-size:10px;
+}
+.stat-lbl{color:var(--td);letter-spacing:1.5px;text-transform:uppercase}
+.stat-val{color:var(--c1);font-weight:500}
+.stat-val.v-ok{color:var(--c4)}
+.stat-val.v-err{color:var(--c2)}
+
+/* ━━━ TOAST ━━━ */
 .toast{
-  position:fixed;top:70px;right:18px;z-index:999;
-  background:var(--card);border:1px solid var(--border);border-radius:9px;
-  padding:12px 18px;font-size:12px;max-width:290px;
-  transform:translateX(120%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);
-  border-left:3px solid var(--c1);
+  position:fixed;top:68px;right:20px;z-index:1000;
+  background:var(--s3);border:1px solid var(--b1);border-radius:10px;
+  padding:12px 18px;font-size:12px;max-width:300px;
+  transform:translateX(110%) scale(.95);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s;
+  border-left:3px solid var(--c1);opacity:0;
+  display:flex;align-items:center;gap:10px;
 }
-.toast.on{transform:translateX(0)}
-.toast.e{border-left-color:var(--c2)}
-.toast.s{border-left-color:var(--green)}
+.toast.show{transform:translateX(0) scale(1);opacity:1}
+.toast.t-ok{border-left-color:var(--c4)}
+.toast.t-err{border-left-color:var(--c2)}
+.toast.t-warn{border-left-color:var(--c5)}
+.toast-icon{font-size:16px;flex-shrink:0}
+.toast-msg{flex:1}
 
+/* ━━━ SCROLLBAR ━━━ */
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--b1);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--b2)}
 
-@media(max-width:860px){
-  .workspace{grid-template-columns:1fr;grid-template-rows:55vh 1fr}
-  .epane{border-right:none;border-bottom:1px solid var(--border)}
-  .kbdhint{display:none}
+/* ━━━ RESPONSIVE ━━━ */
+@media(max-width:900px){
+  #workspace{grid-template-columns:1fr;grid-template-rows:50vh 50vh}
+  #editor-pane{border-right:none;border-bottom:1px solid var(--b1)}
+  .kbd-hint,.logo-sub,.status-area{display:none}
 }
+
+/* ━━━ SELECTION ━━━ */
+::selection{background:rgba(124,58,237,.35);color:var(--tx)}
 </style>
 </head>
 <body>
+<canvas id="bg-canvas"></canvas>
+<div class="grid-overlay"></div>
+
 <div id="app">
 
-  <header>
-    <div class="logo">
-      <div class="logo-hex">N</div>
+  <!-- ━━━ HEADER ━━━ -->
+  <div id="hdr">
+    <!-- LOGO -->
+    <div class="logo-area">
+      <div class="logo-mark">
+        <svg viewBox="0 0 36 36" fill="none">
+          <polygon points="18,1 34,9.5 34,26.5 18,35 2,26.5 2,9.5" stroke="url(#lg1)" stroke-width="1.2" fill="none"/>
+          <circle cx="18" cy="18" r="5.5" fill="url(#lg2)" opacity=".9"/>
+          <circle cx="18" cy="5" r="2" fill="var(--c1)" opacity=".7"/>
+          <circle cx="18" cy="31" r="2" fill="var(--c2)" opacity=".7"/>
+          <circle cx="5" cy="11.5" r="2" fill="var(--c3)" opacity=".7"/>
+          <circle cx="31" cy="11.5" r="2" fill="var(--c1)" opacity=".5"/>
+          <circle cx="5" cy="24.5" r="2" fill="var(--c2)" opacity=".5"/>
+          <circle cx="31" cy="24.5" r="2" fill="var(--c3)" opacity=".7"/>
+          <line x1="18" y1="7" x2="13" y2="13.5" stroke="var(--c1)" stroke-width=".6" opacity=".4"/>
+          <line x1="18" y1="7" x2="23" y2="13.5" stroke="var(--c1)" stroke-width=".6" opacity=".4"/>
+          <line x1="7" y1="13" x2="13" y2="14" stroke="var(--c3)" stroke-width=".6" opacity=".3"/>
+          <line x1="29" y1="13" x2="23" y2="14" stroke="var(--c3)" stroke-width=".6" opacity=".3"/>
+          <defs>
+            <linearGradient id="lg1" x1="0" y1="0" x2="36" y2="36"><stop offset="0%" stop-color="var(--c1)"/><stop offset="100%" stop-color="var(--c2)"/></linearGradient>
+            <radialGradient id="lg2" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fff" stop-opacity=".9"/><stop offset="100%" stop-color="var(--c1)" stop-opacity=".6"/></radialGradient>
+          </defs>
+        </svg>
+      </div>
       <div>
-        <div class="logo-name">NEURON</div>
-        <span class="logo-tag">ONLINE COMPILER</span>
+        <div class="logo-txt">NEURON</div>
+        <div class="logo-sub">ONLINE COMPILER</div>
       </div>
     </div>
 
-    <div class="hcenter">
-      <div class="live-dot"></div>
-      <div class="live-txt">Runtime Online · judge0 CE</div>
+    <!-- STATUS -->
+    <div class="status-area">
+      <div class="pulse"></div>
+      <span class="status-txt">Runtime Active</span>
+      <span class="api-tag">Judge0 CE</span>
     </div>
 
-    <div class="hactions">
-      <div class="lpick" id="lpick">
-        <button class="lbtn" onclick="toggleDrop()">
-          <span id="cur-ic">🐍</span>
-          <span id="cur-nm">Python</span>
-          <span class="larrow">▾</span>
-        </button>
-        <div class="ldrop" id="ldrop"></div>
+    <!-- LANG PICKER -->
+    <div class="lang-area" id="langArea">
+      <button class="lang-btn" onclick="toggleLangDrop(event)">
+        <span class="lang-color-dot" id="lang-dot" style="background:var(--c1)"></span>
+        <span id="lang-icon">🐍</span>
+        <span id="lang-name">Python</span>
+        <span class="lang-btn-arrow">▾</span>
+      </button>
+      <div class="lang-drop" id="langDrop">
+        <div class="lang-drop-search">
+          <span style="color:var(--td);font-size:12px">⌕</span>
+          <input id="lang-search" type="text" placeholder="Search language..." oninput="filterLangs()">
+        </div>
+        <div class="lang-list" id="langList"></div>
       </div>
-      <span class="kbdhint">Ctrl+Enter</span>
-      <button class="ibtn" onclick="resetCode()" title="Reset">↺</button>
-      <button class="ibtn copy" onclick="copyCode()" title="Copy">⎘</button>
-      <button class="runbtn" id="runbtn" onclick="runCode()">
-        <svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <div class="spin"></div>
-        <span id="runlbl">RUN</span>
+    </div>
+
+    <!-- RIGHT CONTROLS -->
+    <div class="ctrl-area">
+      <span class="kbd-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> Run</span>
+      <button class="icon-btn" onclick="resetCode()" title="Reset to Template">↺</button>
+      <button class="icon-btn ic-copy" onclick="copyCode()" title="Copy Code">⎘</button>
+      <button class="icon-btn" onclick="downloadCode()" title="Download File">⬇</button>
+      <button class="icon-btn ic-share" onclick="shareCode()" title="Share Code">&#8599;</button>
+      <button class="run-btn" id="runBtn" onclick="runCode()">
+        <svg class="run-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <div class="run-spinner"></div>
+        <span id="runLabel">RUN</span>
       </button>
     </div>
-  </header>
+  </div>
 
-  <div class="workspace">
-    <div class="epane">
-      <div class="ptab">
-        <div class="mac"><span class="mr"></span><span class="my"></span><span class="mg"></span></div>
-        <div class="ftab on" id="ftab">main.py</div>
-        <div class="ptab-r">
-          <div class="fc">
-            <button class="fb" onclick="chgFs(-1)">−</button>
-            <span class="fv" id="fval">14</span>
-            <button class="fb" onclick="chgFs(1)">+</button>
+  <!-- ━━━ WORKSPACE ━━━ -->
+  <div id="workspace">
+
+    <!-- EDITOR PANE -->
+    <div id="editor-pane">
+      <div class="ed-bar">
+        <div class="mac-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <div class="file-tab active" id="fileTab">
+          <span class="file-tab-dot"></span>
+          <span id="fileTabName">main.py</span>
+        </div>
+        <div class="ed-bar-right">
+          <div class="font-ctrl">
+            <button class="font-btn" onclick="chgFont(-1)" title="Decrease Font">−</button>
+            <span class="font-val" id="fontVal">14</span>
+            <button class="font-btn" onclick="chgFont(1)" title="Increase Font">+</button>
           </div>
         </div>
       </div>
-      <div class="ew"><textarea id="editor"></textarea></div>
-      <div class="sbar">
-        <span>NEURON</span><span class="sbar-sep">·</span>
-        <span id="sb-l">Python 3.8</span><span class="sbar-sep">·</span>
-        <span class="sbar-pos" id="sb-p">Ln 1, Col 1</span><span class="sbar-sep">·</span>
-        <span id="sb-c">0 chars</span>
+
+      <div class="editor-wrap">
+        <textarea id="code-ta"></textarea>
+      </div>
+
+      <div class="status-bar">
+        <div class="sb-item">NEURON v3</div>
+        <div class="sb-item accent" id="sb-lang">Python 3.8</div>
+        <div class="sb-item accent" id="sb-pos">Ln 1, Col 1</div>
+        <div class="sb-item" id="sb-chars">0 chars</div>
+        <div class="sb-item" id="sb-lines">1 lines</div>
+        <div class="sb-item" id="sb-status">Ready</div>
       </div>
     </div>
 
-    <div class="rpanel">
-      <div class="sinwrap" id="sinwrap">
-        <div class="sinhead" onclick="toggleStdin()">
-          <span>⌨</span><span>Standard Input</span>
-          <span class="sinchev">▾</span>
+    <!-- RIGHT PANEL -->
+    <div id="right-panel">
+
+      <!-- STDIN -->
+      <div class="stdin-panel" id="stdinPanel">
+        <div class="stdin-hdr" onclick="toggleStdin()">
+          <span style="font-size:12px;color:var(--td)">⌨</span>
+          <span class="stdin-hdr-lbl">Standard Input</span>
+          <span class="stdin-chev">▾</span>
         </div>
-        <div class="sinbody">
-          <textarea id="stdin" placeholder="Input for your program (stdin)..."></textarea>
+        <div class="stdin-body">
+          <textarea id="stdin-ta" placeholder="Enter program input (stdin)..."></textarea>
         </div>
       </div>
 
-      <div class="outsec">
-        <div class="outhead">
-          <span>◈</span>
-          <span class="outtitle">Output Console</span>
-          <div class="outacts">
-            <button class="obtn" onclick="copyOut()">COPY</button>
-            <button class="obtn" onclick="clearOut()">CLEAR</button>
+      <!-- OUTPUT -->
+      <div class="out-panel">
+        <div class="out-hdr">
+          <span style="font-size:12px;color:var(--td)">◈</span>
+          <span class="out-hdr-lbl">Output Console</span>
+          <div class="out-actions">
+            <button class="out-btn" onclick="copyOutput()">Copy</button>
+            <button class="out-btn" onclick="clearOutput()">Clear</button>
           </div>
-          <span class="badge" id="badge">IDLE</span>
+          <span class="status-badge" id="statusBadge">IDLE</span>
         </div>
-        <div class="outbody" id="outbody">
-          <div class="ph" id="ph">
-            <div class="ph-ic">▷</div>
-            <div class="ph-t">Awaiting Execution</div>
-            <div class="ph-s">Press Ctrl+Enter or click RUN</div>
+
+        <div class="out-body" id="outBody">
+          <!-- IDLE -->
+          <div class="idle-state" id="idleState">
+            <div class="idle-art">
+              <div class="idle-art-ring"></div>
+              <div class="idle-art-ring"></div>
+              <div class="idle-art-ring"></div>
+              <div class="idle-art-core" id="idleIcon">▷</div>
+            </div>
+            <div class="idle-txt">Ready to Execute</div>
+            <div class="idle-sub">Write code and hit RUN<br>to see the output here</div>
+            <div class="idle-shortcuts">
+              <span class="shortcut-pill">Ctrl+Enter — Run</span>
+              <span class="shortcut-pill">Ctrl+/ — Comment</span>
+            </div>
           </div>
-          <div class="xov" id="xov">
-            <div class="xring"></div>
-            <div class="xlbl">Executing...</div>
+          <!-- EXEC OVERLAY -->
+          <div class="exec-overlay" id="execOverlay">
+            <div class="exec-ring-wrap">
+              <div class="exec-ring"></div>
+              <div class="exec-ring-2"></div>
+              <div class="exec-ring-core"></div>
+            </div>
+            <div class="exec-label" id="execLabel">Compiling...</div>
           </div>
-          <pre id="outpre"></pre>
+          <!-- OUTPUT -->
+          <pre id="out-pre"></pre>
         </div>
-        <div class="stats">
-          <div class="stat"><span class="sl">TIME</span><span class="sv" id="st">—</span></div>
-          <div class="stat"><span class="sl">MEM</span><span class="sv" id="sm">—</span></div>
-          <div class="stat" style="margin-left:auto"><span class="sl">EXIT</span><span class="sv" id="se">—</span></div>
+
+        <div class="stats-bar">
+          <div class="stat-item"><span class="stat-lbl">Time</span><span class="stat-val" id="stat-time">—</span></div>
+          <div class="stat-item"><span class="stat-lbl">Memory</span><span class="stat-val" id="stat-mem">—</span></div>
+          <div class="stat-item" style="margin-left:auto;border-right:none"><span class="stat-lbl">Exit</span><span class="stat-val" id="stat-exit">—</span></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toast-icon">ℹ</span>
+  <span class="toast-msg" id="toast-msg"></span>
+</div>
 
 <script>
-/* ── Judge0 CE public instance — free, no API key ─────────────────
-   Docs: https://ce.judge0.com
-   ?wait=true → synchronous, no polling needed
-──────────────────────────────────────────────────────────────────── */
-const J0 = 'https://ce.judge0.com';
+// ━━━ JUDGE0 CE — Free public API, no key needed ━━━
+// CRITICAL: Must use base64_encoded=true to avoid UTF-8 conversion errors
+const J0_API = 'https://ce.judge0.com';
 
+// ━━━ LANGUAGE DATABASE ━━━
+// j0 = Judge0 language ID: https://ce.judge0.com/languages
 const LANGS = [
-  {id:'python',    nm:'Python',      ic:'🐍', vr:'3.8.1',   j0:71, ex:'py',    mo:'python',
-   code:`# Python 3 — NEURON Compiler
-def greet(name: str) -> str:
-    return f"Hello, {name}! 🧠"
+  // ── POPULAR ──
+  { cat:'Popular', id:'python3',  name:'Python 3',     icon:'🐍', color:'#3b82f6', ver:'3.8.1',   j0:71,  ext:'py',    mode:'python',
+    code:'# Python 3\nprint("Hello, World!")\n\n# Fibonacci\ndef fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        yield a\n        a, b = b, a + b\n\nprint("Fibonacci:", list(fib(10)))' },
 
-print(greet("World"))
+  { cat:'Popular', id:'cpp17',    name:'C++ 17',       icon:'⚡', color:'#6366f1', ver:'GCC 9.2',  j0:54,  ext:'cpp',   mode:'text/x-c++src',
+    code:'#include <iostream>\n#include <vector>\n#include <algorithm>\nusing namespace std;\n\nint fib(int n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }\n\nint main() {\n    cout << "Hello, World!" << endl;\n    vector<int> v;\n    for (int i = 0; i < 10; i++) v.push_back(fib(i));\n    cout << "Fibonacci: ";\n    for (int x : v) cout << x << " ";\n    cout << endl;\n    return 0;\n}' },
 
-# Fibonacci
-def fib(n):
-    a, b = 0, 1
-    for _ in range(n):
-        yield a
-        a, b = b, a + b
+  { cat:'Popular', id:'c',        name:'C',            icon:'🔷', color:'#06b6d4', ver:'GCC 9.2',  j0:50,  ext:'c',     mode:'text/x-csrc',
+    code:'#include <stdio.h>\n\nint fib(int n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }\n\nint main() {\n    printf("Hello, World!\\n");\n    printf("Fibonacci: ");\n    for (int i = 0; i < 10; i++) printf("%d ", fib(i));\n    printf("\\n");\n    return 0;\n}' },
 
-print("Fibonacci:", list(fib(10)))`},
+  { cat:'Popular', id:'java',     name:'Java',         icon:'☕', color:'#f59e0b', ver:'JDK 13',   j0:62,  ext:'java',  mode:'text/x-java',
+    code:'public class Main {\n    static int fib(int n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }\n\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n        System.out.print("Fibonacci: ");\n        for (int i = 0; i < 10; i++)\n            System.out.print(fib(i) + " ");\n        System.out.println();\n    }\n}' },
 
-  {id:'cpp',       nm:'C++',         ic:'⚡', vr:'GCC 9.2', j0:54, ex:'cpp',   mo:'text/x-c++src',
-   code:`#include <iostream>
-#include <vector>
-using namespace std;
+  { cat:'Popular', id:'javascript', name:'JavaScript', icon:'🌐', color:'#eab308', ver:'Node 12.14',j0:63,  ext:'js',    mode:'javascript',
+    code:'console.log("Hello, World!");\n\nfunction* fib() {\n    let [a, b] = [0, 1];\n    while (true) { yield a; [a, b] = [b, a + b]; }\n}\n\nconst gen = fib();\nconst result = Array.from({length: 10}, () => gen.next().value);\nconsole.log("Fibonacci:", result);' },
 
-int fib(int n){ return n<=1?n:fib(n-1)+fib(n-2); }
+  { cat:'Popular', id:'typescript', name:'TypeScript', icon:'🔹', color:'#3b82f6', ver:'3.7.4',   j0:74,  ext:'ts',    mode:'javascript',
+    code:'const greet = (name: string): string => `Hello, ${name}!`;\nconsole.log(greet("World"));\n\nfunction* fib(): Generator<number> {\n    let [a, b] = [0, 1];\n    while (true) { yield a; [a, b] = [b, a + b]; }\n}\n\nconst gen = fib();\nconst result: number[] = Array.from({length: 10}, () => gen.next().value as number);\nconsole.log("Fibonacci:", result);' },
 
-int main(){
-    cout<<"Hello, World! 🧠"<<endl;
-    cout<<"Fibonacci: ";
-    for(int i=0;i<10;i++) cout<<fib(i)<<" ";
-    cout<<endl;
-    return 0;
-}`},
+  { cat:'Popular', id:'csharp',   name:'C#',           icon:'🟣', color:'#a855f7', ver:'Mono 6.6', j0:51,  ext:'cs',    mode:'text/x-csharp',
+    code:'using System;\nusing System.Linq;\n\nclass Main {\n    static int Fib(int n) => n <= 1 ? n : Fib(n-1) + Fib(n-2);\n\n    static void Main() {\n        Console.WriteLine("Hello, World!");\n        var fibs = string.Join(" ", Enumerable.Range(0, 10).Select(Fib));\n        Console.WriteLine("Fibonacci: " + fibs);\n    }\n}' },
 
-  {id:'c',         nm:'C',           ic:'🔷', vr:'GCC 9.2', j0:50, ex:'c',     mo:'text/x-csrc',
-   code:`#include <stdio.h>
+  { cat:'Popular', id:'python2',  name:'Python 2',     icon:'🐍', color:'#64748b', ver:'2.7.17',   j0:70,  ext:'py',    mode:'python',
+    code:'# Python 2\nprint "Hello, World!"\n\ndef fib(n):\n    a, b = 0, 1\n    result = []\n    for _ in range(n):\n        result.append(a)\n        a, b = b, a + b\n    return result\n\nprint "Fibonacci:", fib(10)' },
 
-int fib(int n){ return n<=1?n:fib(n-1)+fib(n-2); }
+  // ── SYSTEMS ──
+  { cat:'Systems', id:'rust',     name:'Rust',         icon:'🦀', color:'#f97316', ver:'1.40.0',   j0:73,  ext:'rs',    mode:'rust',
+    code:'fn fib(n: u64) -> u64 {\n    if n <= 1 { return n; }\n    fib(n - 1) + fib(n - 2)\n}\n\nfn main() {\n    println!("Hello, World!");\n    let fibs: Vec<u64> = (0..10).map(fib).collect();\n    println!("Fibonacci: {:?}", fibs);\n}' },
 
-int main(){
-    printf("Hello, World! 🧠\n");
-    printf("Fibonacci: ");
-    for(int i=0;i<10;i++) printf("%d ",fib(i));
-    printf("\n");
-    return 0;
-}`},
+  { cat:'Systems', id:'go',       name:'Go',           icon:'🐹', color:'#06b6d4', ver:'1.13.5',   j0:60,  ext:'go',    mode:'go',
+    code:'package main\n\nimport "fmt"\n\nfunc fib(n int) int {\n    if n <= 1 { return n }\n    return fib(n-1) + fib(n-2)\n}\n\nfunc main() {\n    fmt.Println("Hello, World!")\n    fmt.Print("Fibonacci: ")\n    for i := 0; i < 10; i++ {\n        fmt.Printf("%d ", fib(i))\n    }\n    fmt.Println()\n}' },
 
-  {id:'java',      nm:'Java',        ic:'☕', vr:'JDK 13',  j0:62, ex:'java',  mo:'text/x-java',
-   code:`public class Main {
-    static int fib(int n){ return n<=1?n:fib(n-1)+fib(n-2); }
+  { cat:'Systems', id:'cpp14',    name:'C++ 14',       icon:'⚡', color:'#818cf8', ver:'GCC 9.2',  j0:53,  ext:'cpp',   mode:'text/x-c++src',
+    code:'#include <iostream>\n#include <vector>\nusing namespace std;\n\nint fib(int n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }\n\nint main() {\n    cout << "Hello, World!" << endl;\n    cout << "Fibonacci: ";\n    for (int i = 0; i < 10; i++) cout << fib(i) << " ";\n    cout << endl;\n    return 0;\n}' },
 
-    public static void main(String[] args){
-        System.out.println("Hello, World! 🧠");
-        System.out.print("Fibonacci: ");
-        for(int i=0;i<10;i++) System.out.print(fib(i)+" ");
-        System.out.println();
-    }
-}`},
+  // ── SCRIPTING ──
+  { cat:'Scripting', id:'ruby',   name:'Ruby',         icon:'💎', color:'#ef4444', ver:'2.7.0',    j0:72,  ext:'rb',    mode:'ruby',
+    code:'puts "Hello, World!"\n\ndef fib(n)\n  n <= 1 ? n : fib(n-1) + fib(n-2)\nend\n\nputs "Fibonacci: #{(0...10).map { |i| fib(i) }.join(" ")}"' },
 
-  {id:'js',        nm:'JavaScript',  ic:'🌐', vr:'Node 12', j0:63, ex:'js',    mo:'javascript',
-   code:`// JavaScript (Node.js)
-const greet = name => \`Hello, \${name}! \u{1F9E0}\`;
-console.log(greet("World"));
+  { cat:'Scripting', id:'php',    name:'PHP',          icon:'🐘', color:'#8b5cf6', ver:'7.4.1',    j0:68,  ext:'php',   mode:'text/x-php',
+    code:'<?php\nfunction fib($n) {\n    return $n <= 1 ? $n : fib($n - 1) + fib($n - 2);\n}\n\necho "Hello, World!\\n";\necho "Fibonacci: " . implode(" ", array_map("fib", range(0, 9))) . "\\n";\n?>' },
 
-function* fib(){
-    let [a,b]=[0,1];
-    while(true){ yield a; [a,b]=[b,a+b]; }
-}
-const g=fib();
-console.log("Fibonacci:", Array.from({length:10},()=>g.next().value));`},
+  { cat:'Scripting', id:'perl',   name:'Perl',         icon:'🐪', color:'#0ea5e9', ver:'5.28.1',   j0:85,  ext:'pl',    mode:'perl',
+    code:'use strict;\nuse warnings;\n\nprint "Hello, World!\\n";\n\nsub fib {\n    my $n = shift;\n    return $n if $n <= 1;\n    return fib($n-1) + fib($n-2);\n}\n\nmy @fibs = map { fib($_) } 0..9;\nprint "Fibonacci: @fibs\\n";' },
 
-  {id:'ts',        nm:'TypeScript',  ic:'🔷', vr:'3.7.4',   j0:74, ex:'ts',    mo:'javascript',
-   code:`const greet=(name:string):string=>\`Hello, \${name}! \u{1F9E0}\`;
-console.log(greet("World"));
+  { cat:'Scripting', id:'lua',    name:'Lua',          icon:'🌙', color:'#1d4ed8', ver:'5.3.5',    j0:64,  ext:'lua',   mode:'lua',
+    code:'print("Hello, World!")\n\nfunction fib(n)\n    if n <= 1 then return n end\n    return fib(n-1) + fib(n-2)\nend\n\nlocal result = {}\nfor i = 0, 9 do\n    result[#result+1] = fib(i)\nend\nprint("Fibonacci: " .. table.concat(result, " "))' },
 
-function* fib():Generator<number>{
-    let [a,b]=[0,1];
-    while(true){ yield a; [a,b]=[b,a+b]; }
-}
-const g=fib();
-const r:number[]=Array.from({length:10},()=>g.next().value as number);
-console.log("Fibonacci:",r);`},
+  { cat:'Scripting', id:'bash',   name:'Bash',         icon:'🖥', color:'#065f46', ver:'5.0.0',    j0:46,  ext:'sh',    mode:'shell',
+    code:'#!/bin/bash\necho "Hello, World!"\n\na=0; b=1\necho -n "Fibonacci: "\nfor i in $(seq 1 10); do\n    echo -n "$a "\n    c=$((a + b))\n    a=$b\n    b=$c\ndone\necho' },
 
-  {id:'rust',      nm:'Rust',        ic:'🦀', vr:'1.40.0',  j0:73, ex:'rs',    mo:'rust',
-   code:`fn fib(n:u64)->u64{ if n<=1{return n;} fib(n-1)+fib(n-2) }
+  // ── FUNCTIONAL ──
+  { cat:'Functional', id:'haskell', name:'Haskell',    icon:'λ',  color:'#7c3aed', ver:'8.8.1',    j0:61,  ext:'hs',    mode:'haskell',
+    code:'fib :: Int -> Int\nfib 0 = 0\nfib 1 = 1\nfib n = fib (n-1) + fib (n-2)\n\nmain :: IO ()\nmain = do\n    putStrLn "Hello, World!"\n    let fibs = map fib [0..9]\n    putStrLn $ "Fibonacci: " ++ show fibs' },
 
-fn main(){
-    println!("Hello, World! \u{1F9E0}");
-    let f:Vec<u64>=(0..10).map(fib).collect();
-    println!("Fibonacci: {:?}",f);
-}`},
+  { cat:'Functional', id:'erlang', name:'Erlang',      icon:'☯',  color:'#dc2626', ver:'22.2',     j0:58,  ext:'erl',   mode:'erlang',
+    code:'-module(main).\n-export([main/0]).\n\nfib(0) -> 0;\nfib(1) -> 1;\nfib(N) -> fib(N-1) + fib(N-2).\n\nmain() ->\n    io:format("Hello, World!~n"),\n    Fibs = [fib(N) || N <- lists:seq(0, 9)],\n    io:format("Fibonacci: ~p~n", [Fibs]).' },
 
-  {id:'go',        nm:'Go',          ic:'🐹', vr:'1.13.5',  j0:60, ex:'go',    mo:'go',
-   code:`package main
-import "fmt"
+  // ── JVM ──
+  { cat:'JVM',  id:'kotlin',    name:'Kotlin',         icon:'🎯', color:'#f97316', ver:'1.3.70',   j0:78,  ext:'kt',    mode:'text/x-kotlin',
+    code:'fun fib(n: Int): Int = if (n <= 1) n else fib(n-1) + fib(n-2)\n\nfun main() {\n    println("Hello, World!")\n    val fibs = (0..9).map { fib(it) }\n    println("Fibonacci: $fibs")\n}' },
 
-func fib(n int) int{
-    if n<=1{return n}
-    return fib(n-1)+fib(n-2)
-}
+  { cat:'JVM',  id:'scala',     name:'Scala',          icon:'🔴', color:'#dc2626', ver:'2.13.2',   j0:81,  ext:'scala', mode:'text/x-scala',
+    code:'object Main extends App {\n  def fib(n: Int): Int = if (n <= 1) n else fib(n-1) + fib(n-2)\n  \n  println("Hello, World!")\n  val fibs = (0 until 10).map(fib).mkString(" ")\n  println(s"Fibonacci: $fibs")\n}' },
 
-func main(){
-    fmt.Println("Hello, World! \u{1F9E0}")
-    fmt.Print("Fibonacci: ")
-    for i:=0;i<10;i++{fmt.Printf("%d ",fib(i))}
-    fmt.Println()
-}`},
+  { cat:'JVM',  id:'groovy',    name:'Groovy',         icon:'🟢', color:'#16a34a', ver:'3.0.3',    j0:88,  ext:'groovy',mode:'text/x-groovy',
+    code:'println "Hello, World!"\n\ndef fib = { n -> n <= 1 ? n : fib(n-1) + fib(n-2) }\n\ndef fibs = (0..<10).collect { fib(it) }\nprintln "Fibonacci: ${fibs.join(" ")}"' },
 
-  {id:'ruby',      nm:'Ruby',        ic:'💎', vr:'2.7.0',   j0:72, ex:'rb',    mo:'ruby',
-   code:`def fib(n) = n<=1 ? n : fib(n-1)+fib(n-2)
+  // ── APPLE ──
+  { cat:'Apple', id:'swift',    name:'Swift',           icon:'🦅', color:'#f97316', ver:'5.2.3',   j0:83,  ext:'swift', mode:'swift',
+    code:'func fib(_ n: Int) -> Int { n <= 1 ? n : fib(n-1) + fib(n-2) }\n\nprint("Hello, World!")\nlet fibs = (0..<10).map { fib($0) }\nprint("Fibonacci:", fibs)' },
 
-puts "Hello, World! \u{1F9E0}"
-puts "Fibonacci: #{(0...10).map{|i|fib(i)}.join(' ')}"
-`},
+  { cat:'Apple', id:'objc',     name:'Objective-C',    icon:'🍎', color:'#64748b', ver:'Clang 7',  j0:79,  ext:'m',     mode:'text/x-objectivec',
+    code:'#import <Foundation/Foundation.h>\n\nint fib(int n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }\n\nint main() {\n    NSLog(@"Hello, World!");\n    NSMutableArray *arr = [NSMutableArray array];\n    for (int i = 0; i < 10; i++) [arr addObject:@(fib(i))];\n    NSLog(@"Fibonacci: %@", arr);\n    return 0;\n}' },
 
-  {id:'csharp',    nm:'C#',          ic:'🟣', vr:'Mono 6.6',j0:51, ex:'cs',    mo:'text/x-csharp',
-   code:`using System;
-using System.Linq;
-class Main{
-    static int Fib(int n)=>n<=1?n:Fib(n-1)+Fib(n-2);
-    static void Main(){
-        Console.WriteLine("Hello, World! \u{1F9E0}");
-        Console.WriteLine("Fibonacci: "+string.Join(" ",Enumerable.Range(0,10).Select(Fib)));
-    }
-}`},
+  // ── DATA SCIENCE ──
+  { cat:'Data Science', id:'r',  name:'R',              icon:'📊', color:'#1d4ed8', ver:'4.0.0',   j0:80,  ext:'r',     mode:'r',
+    code:'cat("Hello, World!\\n")\n\nfib <- function(n) {\n  if (n <= 1) return(n)\n  return(fib(n-1) + fib(n-2))\n}\n\nfibs <- sapply(0:9, fib)\ncat("Fibonacci:", paste(fibs, collapse=" "), "\\n")' },
 
-  {id:'php',       nm:'PHP',         ic:'🐘', vr:'7.4.1',   j0:68, ex:'php',   mo:'text/x-php',
-   code:`<?php
-function fib($n){return $n<=1?$n:fib($n-1)+fib($n-2);}
-echo "Hello, World! \u{1F9E0}\n";
-echo "Fibonacci: ".implode(" ",array_map("fib",range(0,9)))."\n";
-?>`},
+  // ── ASSEMBLY ──
+  { cat:'Assembly', id:'asm',   name:'Assembly x86',   icon:'⚙', color:'#6b7280',  ver:'NASM 2.14',j0:45, ext:'asm',   mode:'text/x-asm',
+    code:'; x86-64 Assembly (NASM)\nsection .data\n    msg db "Hello, World!", 10\n    len equ $-msg\n\nsection .text\n    global _start\n\n_start:\n    mov rax, 1\n    mov rdi, 1\n    mov rsi, msg\n    mov rdx, len\n    syscall\n    mov rax, 60\n    xor rdi, rdi\n    syscall' },
 
-  {id:'swift',     nm:'Swift',       ic:'🦅', vr:'5.2.3',   j0:83, ex:'swift', mo:'swift',
-   code:`func fib(_ n:Int)->Int{ n<=1 ? n : fib(n-1)+fib(n-2) }
-print("Hello, World! \u{1F9E0}")
-print("Fibonacci:",(0..<10).map{fib($0)})`},
+  // ── OTHER ──
+  { cat:'Other',  id:'pascal',  name:'Pascal',          icon:'📐', color:'#8b5cf6', ver:'FPC 3.0.4',j0:67, ext:'pas',   mode:'text/x-pascal',
+    code:'program Hello;\n\nfunction Fib(n: integer): integer;\nbegin\n  if n <= 1 then Fib := n\n  else Fib := Fib(n-1) + Fib(n-2);\nend;\n\nvar i: integer;\nbegin\n  writeln(\'Hello, World!\');\n  write(\'Fibonacci: \');\n  for i := 0 to 9 do write(Fib(i), \' \');\n  writeln;\nend.' },
 
-  {id:'kotlin',    nm:'Kotlin',      ic:'🎯', vr:'1.3.70',  j0:78, ex:'kt',    mo:'text/x-kotlin',
-   code:`fun fib(n:Int):Int=if(n<=1)n else fib(n-1)+fib(n-2)
-fun main(){
-    println("Hello, World! \u{1F9E0}")
-    println("Fibonacci: \${(0..9).map{fib(it)}}")
-}`},
+  { cat:'Other',  id:'fortran', name:'Fortran',         icon:'🔬', color:'#0ea5e9', ver:'GFortran 9',j0:59,ext:'f90',   mode:'text/x-fortran',
+    code:'program main\n  implicit none\n  integer :: i\n  integer, external :: fib\n  \n  print *, "Hello, World!"\n  print *, "Fibonacci:", (fib(i), i=0,9)\nend program main\n\nrecursive function fib(n) result(r)\n  implicit none\n  integer, intent(in) :: n\n  integer :: r\n  if (n <= 1) then\n    r = n\n  else\n    r = fib(n-1) + fib(n-2)\n  end if\nend function fib' },
 
-  {id:'bash',      nm:'Bash',        ic:'🖥️', vr:'5.0.0',   j0:46, ex:'sh',    mo:'shell',
-   code:`#!/bin/bash
-echo "Hello, World! \u{1F9E0}"
-a=0;b=1
-echo -n "Fibonacci: "
-for i in $(seq 1 10);do echo -n "$a ";c=$((a+b));a=$b;b=$c;done
-echo`},
+  { cat:'Other',  id:'cobol',   name:'COBOL',           icon:'📋', color:'#374151', ver:'GnuCOBOL 2.2',j0:77,ext:'cob',mode:'text/x-cobol',
+    code:'IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n01 MSG PIC X(20) VALUE "Hello, World!".\nPROCEDURE DIVISION.\n    DISPLAY MSG\n    STOP RUN.' },
 ];
 
-/* ── STATE ─────────────────────────────────────────────────────── */
-let lang=LANGS[0], cm=null, fs=14, t0=0;
+// ━━━ STATE ━━━
+let currentLang = LANGS[0];
+let cm = null;
+let fontSize = 14;
+let execStart = 0;
+let isRunning = false;
 
-/* ── INIT ──────────────────────────────────────────────────────── */
-window.addEventListener('DOMContentLoaded',()=>{
-  cm=CodeMirror.fromTextArea(document.getElementById('editor'),{
-    lineNumbers:true, theme:'neuron',
-    matchBrackets:true, autoCloseBrackets:true,
-    indentUnit:4, tabSize:4, styleActiveLine:true,
-    extraKeys:{
-      'Ctrl-Enter':runCode,'Cmd-Enter':runCode,
-      'Tab':c=>c.execCommand('indentMore')
+// ━━━ INIT ━━━
+window.addEventListener('DOMContentLoaded', () => {
+  // CodeMirror
+  cm = CodeMirror.fromTextArea(document.getElementById('code-ta'), {
+    lineNumbers: true,
+    theme: 'neuron',
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    indentUnit: 4,
+    tabSize: 4,
+    indentWithTabs: false,
+    styleActiveLine: true,
+    extraKeys: {
+      'Ctrl-Enter': runCode,
+      'Cmd-Enter':  runCode,
+      'Ctrl-/': cm => cm.execCommand('toggleComment'),
+      'Tab': cm => cm.execCommand('indentMore'),
+      'Shift-Tab': cm => cm.execCommand('indentLess'),
     }
   });
-  cm.on('cursorActivity',()=>{
-    const c=cm.getCursor();
-    document.getElementById('sb-p').textContent=`Ln ${c.line+1}, Col ${c.ch+1}`;
+
+  cm.on('cursorActivity', () => {
+    const c = cm.getCursor();
+    document.getElementById('sb-pos').textContent  = `Ln ${c.line+1}, Col ${c.ch+1}`;
   });
-  cm.on('change',()=>{
-    document.getElementById('sb-c').textContent=`${cm.getValue().length} chars`;
+  cm.on('change', () => {
+    const v = cm.getValue();
+    document.getElementById('sb-chars').textContent = `${v.length} chars`;
+    document.getElementById('sb-lines').textContent = `${v.split('\n').length} lines`;
   });
-  buildDrop();
-  pickLang(LANGS[0]);
-  document.addEventListener('click',e=>{
-    if(!document.getElementById('lpick').contains(e.target))
-      document.getElementById('lpick').classList.remove('open');
+
+  buildLangList();
+  selectLang(LANGS[0]);
+  initParticles();
+
+  // Close dropdown on outside click
+  document.addEventListener('click', e => {
+    if (!document.getElementById('langArea').contains(e.target))
+      document.getElementById('langArea').classList.remove('open');
   });
 });
 
-/* ── LANG DROPDOWN ─────────────────────────────────────────────── */
-function buildDrop(){
-  document.getElementById('ldrop').innerHTML=LANGS.map(l=>`
-    <div class="lopt ${l.id===lang.id?'active':''}" onclick="pickLang(LANGS.find(x=>x.id==='${l.id}'),true)">
-      <span class="lopt-ic">${l.ic}</span>
-      <span class="lopt-nm">${l.nm}</span>
-      <span class="lopt-vr">${l.vr}</span>
-    </div>`).join('');
-}
-function toggleDrop(){ document.getElementById('lpick').classList.toggle('open'); }
-function pickLang(l,close=false){
-  lang=l;
-  document.getElementById('cur-ic').textContent=l.ic;
-  document.getElementById('cur-nm').textContent=l.nm;
-  document.getElementById('ftab').textContent=`main.${l.ex}`;
-  document.getElementById('sb-l').textContent=`${l.nm} ${l.vr}`;
-  if(cm){ cm.setOption('mode',l.mo); if(!cm.getValue().trim()) cm.setValue(l.code); }
-  buildDrop(); clearOut();
-  if(close) document.getElementById('lpick').classList.remove('open');
-}
+// ━━━ PARTICLES ━━━
+function initParticles() {
+  const c = document.getElementById('bg-canvas');
+  const ctx = c.getContext('2d');
+  let W, H, pts = [];
 
-/* ── FONT SIZE ─────────────────────────────────────────────────── */
-function chgFs(d){
-  fs=Math.max(10,Math.min(22,fs+d));
-  document.querySelector('.CodeMirror').style.fontSize=fs+'px';
-  document.getElementById('fval').textContent=fs;
-}
+  const resize = () => { W = c.width = innerWidth; H = c.height = innerHeight; };
+  resize(); addEventListener('resize', resize);
 
-/* ── STDIN ─────────────────────────────────────────────────────── */
-function toggleStdin(){ document.getElementById('sinwrap').classList.toggle('col'); }
+  for (let i = 0; i < 50; i++) pts.push({
+    x: Math.random() * 9999,
+    y: Math.random() * 9999,
+    vx: (Math.random() - .5) * .25,
+    vy: (Math.random() - .5) * .25,
+    r: Math.random() * 1.5 + .5,
+    hue: Math.random() > .5 ? 195 : Math.random() > .5 ? 265 : 340,
+    a: Math.random() * .4 + .1,
+  });
 
-/* ── RUN CODE ──────────────────────────────────────────────────── */
-async function runCode(){
-  const code=cm.getValue();
-  if(!code.trim()){ toast('Nothing to run!','e'); return; }
-  const stdin=document.getElementById('stdin').value;
-
-  setRunning(true); clearOut(); showOv(true); setBadge('run','RUNNING'); t0=Date.now();
-
-  try{
-    const res=await fetch(`${J0}/submissions?wait=true&base64_encoded=false`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        language_id:lang.j0,
-        source_code:code,
-        stdin:stdin,
-        cpu_time_limit:10,
-        wall_time_limit:20,
-      })
+  const draw = () => {
+    ctx.clearRect(0, 0, W, H);
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = `hsla(${p.hue},100%,70%,${p.a})`;
+      ctx.fill();
     });
-
-    if(!res.ok){ const t=await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
-    const d=await res.json();
-    const elapsed=Date.now()-t0;
-    showOv(false); setRunning(false);
-
-    const stdout=d.stdout||'';
-    const stderr=d.stderr||'';
-    const cmp=d.compile_output||'';
-    const sid=d.status?.id;
-    const exit=d.exit_code??(sid===3?0:1);
-
-    let out='', isErr=false;
-    if(cmp){ out+='── Compiler Output ──\n'+cmp+'\n'; isErr=true; }
-    if(stdout) out+=stdout;
-    if(stderr){ out+=(out?'\n── stderr ──\n':'')+stderr; isErr=true; }
-
-    const statusMap={5:'⏱ Time Limit Exceeded',6:'💥 Compilation Error',7:'💥 Runtime Error (SIGSEGV)',
-      8:'💥 Runtime Error (SIGFPE)',11:'💥 Runtime Error (NZEC)',12:'💥 Runtime Error',
-      13:'🚫 Internal Error — please try again',14:'🚫 Exec Format Error'};
-    if(statusMap[sid]){ out=statusMap[sid]+'\n\n'+out; isErr=true; }
-
-    showOut(out||'(no output)', isErr, exit);
-    updStats(elapsed, d.memory);
-
-    if(!isErr){ setBadge('ok','SUCCESS'); toast(`Done in ${elapsed}ms ✓`,'s'); }
-    else{ setBadge('err', d.status?.description?.toUpperCase()||'ERROR'); toast(d.status?.description||'Error','e'); }
-
-  }catch(err){
-    showOv(false); setRunning(false); setBadge('err','ERROR');
-    let msg=err.message;
-    if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('TypeError')){
-      msg=`⚠️  Cannot reach Judge0 CE (ce.judge0.com)
-
-This free API needs internet access. Possible reasons:
-  • You're offline
-  • The API is temporarily down → check status.judge0.com
-  • A VPN or firewall is blocking the request
-
-No API key required — try again in a moment.`;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i+1; j < pts.length; j++) {
+        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+        const d = Math.sqrt(dx*dx+dy*dy);
+        if (d < 130) {
+          ctx.beginPath();
+          ctx.moveTo(pts[i].x, pts[i].y);
+          ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.strokeStyle = `rgba(0,212,255,${(1-d/130)*.08})`;
+          ctx.lineWidth = .5; ctx.stroke();
+        }
+      }
     }
-    showOut(msg,true,1);
-    toast('Execution failed','e');
+    requestAnimationFrame(draw);
+  };
+  draw();
+}
+
+// ━━━ LANG DROPDOWN ━━━
+let langFilter = '';
+
+function buildLangList() {
+  const list = document.getElementById('langList');
+  const cats = [...new Set(LANGS.map(l => l.cat))];
+  const term = langFilter.toLowerCase();
+
+  let html = '';
+  cats.forEach(cat => {
+    const items = LANGS.filter(l => l.cat === cat &&
+      (l.name.toLowerCase().includes(term) || l.id.includes(term)));
+    if (items.length === 0) return;
+    html += `<div class="lang-cat">${cat}</div>`;
+    items.forEach(l => {
+      html += `<div class="lang-opt${l.id===currentLang.id?' active':''}" onclick="selectLang(LANGS.find(x=>x.id==='${l.id}'),true)">
+        <span class="lang-opt-ic">${l.icon}</span>
+        <span class="lang-opt-nm">${l.name}</span>
+        <span class="lang-opt-vr">${l.ver}</span>
+      </div>`;
+    });
+  });
+  list.innerHTML = html;
+}
+
+function filterLangs() {
+  langFilter = document.getElementById('lang-search').value;
+  buildLangList();
+}
+
+function toggleLangDrop(e) {
+  e.stopPropagation();
+  const area = document.getElementById('langArea');
+  area.classList.toggle('open');
+  if (area.classList.contains('open')) {
+    setTimeout(() => document.getElementById('lang-search').focus(), 50);
   }
 }
 
-/* ── UI HELPERS ────────────────────────────────────────────────── */
-function setRunning(v){
-  document.getElementById('runbtn').classList.toggle('running',v);
-  document.getElementById('runlbl').textContent=v?'RUNNING':'RUN';
-}
-function showOv(v){ document.getElementById('xov').classList.toggle('on',v); }
-function setBadge(cls,txt){
-  const b=document.getElementById('badge');
-  b.className='badge'+(cls?' '+cls:'');b.textContent=txt;
-}
-function showOut(txt,isErr,code){
-  document.getElementById('ph').style.display='none';
-  const p=document.getElementById('outpre');
-  p.className='on';
-  p.style.color=isErr?'var(--c2)':'var(--txt)';
-  p.textContent=txt;
-  const se=document.getElementById('se');
-  se.textContent=code!==null?code:'—';
-  se.className='sv'+(code&&code!==0?' e':'');
-}
-function updStats(ms,mem){
-  document.getElementById('st').textContent=ms?`${ms}ms`:'—';
-  document.getElementById('sm').textContent=mem?`${(mem/1024).toFixed(1)}KB`:'—';
-}
-function clearOut(){
-  document.getElementById('ph').style.display='flex';
-  const p=document.getElementById('outpre');
-  p.className='';p.textContent='';
-  setBadge('','IDLE');
-  document.getElementById('st').textContent='—';
-  document.getElementById('sm').textContent='—';
-  document.getElementById('se').textContent='—';
-  document.getElementById('se').className='sv';
-}
-function resetCode(){ cm.setValue(lang.code); cm.focus(); toast('Editor reset'); }
-async function copyCode(){
-  try{ await navigator.clipboard.writeText(cm.getValue()); toast('Code copied ✓','s'); }
-  catch{ toast('Copy failed','e'); }
-}
-async function copyOut(){
-  const t=document.getElementById('outpre').textContent;
-  if(!t){ toast('Nothing to copy','e'); return; }
-  try{ await navigator.clipboard.writeText(t); toast('Output copied ✓','s'); }
-  catch{ toast('Copy failed','e'); }
+function selectLang(lang, close = false) {
+  currentLang = lang;
+  document.getElementById('lang-icon').textContent = lang.icon;
+  document.getElementById('lang-name').textContent = lang.name;
+  document.getElementById('lang-dot').style.background = lang.color;
+  document.getElementById('fileTabName').textContent = `main.${lang.ext}`;
+  document.getElementById('sb-lang').textContent = `${lang.name} ${lang.ver}`;
+  document.getElementById('idleIcon').textContent = lang.icon;
+
+  if (cm) {
+    cm.setOption('mode', lang.mode);
+    if (!cm.getValue().trim()) cm.setValue(lang.code);
+  }
+
+  buildLangList();
+  clearOutput();
+  if (close) {
+    document.getElementById('langArea').classList.remove('open');
+    langFilter = '';
+    document.getElementById('lang-search').value = '';
+    buildLangList();
+  }
 }
 
-let tTmr;
-function toast(msg,type=''){
-  const el=document.getElementById('toast');
-  el.textContent=msg;
-  el.className='toast on'+(type?' '+type:'');
-  clearTimeout(tTmr);
-  tTmr=setTimeout(()=>el.classList.remove('on'),3200);
+// ━━━ FONT SIZE ━━━
+function chgFont(d) {
+  fontSize = Math.max(10, Math.min(22, fontSize + d));
+  document.querySelector('.CodeMirror').style.fontSize = fontSize + 'px';
+  document.getElementById('fontVal').textContent = fontSize;
+  cm.refresh();
+}
+
+// ━━━ STDIN TOGGLE ━━━
+function toggleStdin() {
+  document.getElementById('stdinPanel').classList.toggle('collapsed');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ BASE64 HELPERS — fixes the UTF-8 error ━━━━━━━
+// Judge0 REQUIRES base64 encoding to avoid
+// "attributes cannot be converted to UTF-8" errors
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function toB64(str) {
+  // UTF-8 safe base64 encode
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function fromB64(str) {
+  if (!str) return '';
+  try { return decodeURIComponent(escape(atob(str))); }
+  catch { return atob(str); }
+}
+
+// ━━━ RUN CODE ━━━
+async function runCode() {
+  if (isRunning) return;
+  const code = cm.getValue();
+  if (!code.trim()) { showToast('Nothing to run!', 'warn'); return; }
+  const stdin = document.getElementById('stdin-ta').value;
+
+  isRunning = true;
+  setRunningUI(true);
+  clearOutput();
+  showExecOverlay(true);
+  setBadge('running', 'RUNNING');
+  execStart = Date.now();
+
+  // Cycle exec label messages
+  const labels = ['Compiling...', 'Linking...', 'Executing...', 'Processing...'];
+  let lIdx = 0;
+  const lTimer = setInterval(() => {
+    document.getElementById('execLabel').textContent = labels[lIdx++ % labels.length];
+  }, 800);
+
+  try {
+    const res = await fetch(`${J0_API}/submissions?wait=true&base64_encoded=true`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language_id: currentLang.j0,
+        source_code: toB64(code),      // base64 encoded — FIXES the error
+        stdin:       toB64(stdin),      // base64 encoded
+        cpu_time_limit: 10,
+        wall_time_limit: 20,
+        memory_limit: 256000,
+      })
+    });
+
+    clearInterval(lTimer);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const elapsed = Date.now() - execStart;
+
+    showExecOverlay(false);
+    setRunningUI(false);
+    isRunning = false;
+
+    // Decode base64 outputs
+    const stdout  = fromB64(data.stdout);
+    const stderr  = fromB64(data.stderr);
+    const compile = fromB64(data.compile_output);
+    const sid     = data.status?.id;
+    const exitCode = data.exit_code ?? (sid === 3 ? 0 : 1);
+
+    let output = '';
+    let isError = false;
+
+    // Status descriptions
+    const statusDesc = {
+      3: null, // Accepted — no prefix needed
+      4: 'WRONG ANSWER',
+      5: 'TIME LIMIT EXCEEDED',
+      6: 'COMPILATION ERROR',
+      7: 'RUNTIME ERROR (SIGSEGV)',
+      8: 'RUNTIME ERROR (SIGFPE)',
+      9: 'RUNTIME ERROR (SIGABRT)',
+      10:'RUNTIME ERROR (NZEC)',
+      11:'RUNTIME ERROR (OTHER)',
+      12:'RUNTIME ERROR (NZEC)',
+      13:'INTERNAL ERROR',
+      14:'EXEC FORMAT ERROR',
+    };
+
+    if (compile) {
+      output += '[ Compiler Output ]\n' + compile + '\n';
+      isError = true;
+    }
+    if (stdout) output += stdout;
+    if (stderr) {
+      output += (output ? '\n[ stderr ]\n' : '') + stderr;
+      isError = true;
+    }
+
+    if (sid && sid !== 3 && statusDesc[sid]) {
+      output = '[ ' + statusDesc[sid] + ' ]\n\n' + output;
+      isError = true;
+    }
+
+    if (!output.trim()) output = '(program produced no output)';
+
+    showOutput(output, isError, exitCode);
+    updateStats(elapsed, data.memory);
+
+    if (!isError) {
+      setBadge('success', 'SUCCESS');
+      showToast(`Executed in ${elapsed}ms`, 'ok');
+      setSbStatus('OK', 'ok');
+    } else {
+      setBadge('error', data.status?.description?.toUpperCase() || 'ERROR');
+      showToast(data.status?.description || 'Runtime Error', 'err');
+      setSbStatus(data.status?.description || 'Error', 'err');
+    }
+
+  } catch (err) {
+    clearInterval(lTimer);
+    showExecOverlay(false);
+    setRunningUI(false);
+    isRunning = false;
+    setBadge('error', 'ERROR');
+
+    let msg = err.message || 'Unknown error';
+
+    if (msg.toLowerCase().includes('failed to fetch') ||
+        msg.toLowerCase().includes('networkerror') ||
+        msg.toLowerCase().includes('load failed')) {
+      msg = [
+        '[ CONNECTION ERROR ]',
+        '',
+        'Cannot reach ce.judge0.com',
+        '',
+        'Possible causes:',
+        '  - No internet connection',
+        '  - Judge0 CE is temporarily down',
+        '    Check: https://status.judge0.com',
+        '  - VPN or firewall blocking request',
+        '',
+        'Note: No API key needed. Just needs internet.',
+        'Please try again in a moment.',
+      ].join('\n');
+    } else if (msg.includes('UTF-8') || msg.includes('base64')) {
+      msg = '[ ENCODING ERROR ]\n\n' + msg + '\n\nTry removing special characters from your code.';
+    }
+
+    showOutput(msg, true, 1);
+    showToast('Execution failed', 'err');
+    setSbStatus('Error', 'err');
+  }
+}
+
+// ━━━ UI HELPERS ━━━
+function setRunningUI(v) {
+  document.getElementById('runBtn').classList.toggle('running', v);
+  document.getElementById('runLabel').textContent = v ? 'RUNNING' : 'RUN';
+}
+
+function showExecOverlay(v) {
+  document.getElementById('execOverlay').classList.toggle('active', v);
+}
+
+function setBadge(type, text) {
+  const b = document.getElementById('statusBadge');
+  b.className = 'status-badge ' + (type || '');
+  b.textContent = text;
+}
+
+function setSbStatus(txt, cls) {
+  const el = document.getElementById('sb-status');
+  el.textContent = txt;
+  el.className = 'sb-item' + (cls ? ' ' + cls : '');
+}
+
+function showOutput(text, isError, exitCode) {
+  document.getElementById('idleState').style.display = 'none';
+  const pre = document.getElementById('out-pre');
+  pre.className = 'visible ' + (isError ? 'stderr' : 'stdout');
+  pre.textContent = text;
+  // Exit code
+  const se = document.getElementById('stat-exit');
+  se.textContent = exitCode !== null ? exitCode : '—';
+  se.className = 'stat-val' + (exitCode === 0 ? ' v-ok' : exitCode !== null ? ' v-err' : '');
+}
+
+function updateStats(ms, mem) {
+  document.getElementById('stat-time').textContent = ms  ? `${ms}ms` : '—';
+  document.getElementById('stat-mem').textContent  = mem ? `${(mem/1024).toFixed(1)}KB` : '—';
+}
+
+function clearOutput() {
+  document.getElementById('idleState').style.display = 'flex';
+  const pre = document.getElementById('out-pre');
+  pre.className = ''; pre.textContent = '';
+  setBadge('', 'IDLE');
+  setSbStatus('Ready', '');
+  document.getElementById('stat-time').textContent = '—';
+  document.getElementById('stat-mem').textContent  = '—';
+  document.getElementById('stat-exit').textContent = '—';
+  document.getElementById('stat-exit').className = 'stat-val';
+}
+
+// ━━━ CODE ACTIONS ━━━
+function resetCode() {
+  cm.setValue(currentLang.code);
+  cm.focus();
+  showToast('Code reset to template', 'ok');
+}
+
+async function copyCode() {
+  try {
+    await navigator.clipboard.writeText(cm.getValue());
+    showToast('Code copied to clipboard', 'ok');
+  } catch { showToast('Copy failed', 'err'); }
+}
+
+async function copyOutput() {
+  const t = document.getElementById('out-pre').textContent;
+  if (!t) { showToast('Nothing to copy', 'warn'); return; }
+  try {
+    await navigator.clipboard.writeText(t);
+    showToast('Output copied', 'ok');
+  } catch { showToast('Copy failed', 'err'); }
+}
+
+function downloadCode() {
+  const blob = new Blob([cm.getValue()], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `main.${currentLang.ext}`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(`Downloaded main.${currentLang.ext}`, 'ok');
+}
+
+function shareCode() {
+  const code = cm.getValue();
+  const encoded = encodeURIComponent(code);
+  const url = `${location.origin}${location.pathname}?lang=${currentLang.id}&code=${encoded}`;
+  if (url.length > 8000) {
+    showToast('Code too long to share via URL', 'warn');
+    return;
+  }
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Share link copied to clipboard!', 'ok');
+  }).catch(() => {
+    showToast('Could not copy link', 'err');
+  });
+}
+
+// Load shared code from URL params
+(function loadFromURL() {
+  const params = new URLSearchParams(location.search);
+  const langId = params.get('lang');
+  const code   = params.get('code');
+  if (langId) {
+    const found = LANGS.find(l => l.id === langId);
+    if (found) {
+      window.addEventListener('DOMContentLoaded', () => {
+        selectLang(found);
+        if (code) cm.setValue(decodeURIComponent(code));
+      });
+      return;
+    }
+  }
+})();
+
+// ━━━ TOAST ━━━
+let toastTimer;
+function showToast(msg, type = '') {
+  const el    = document.getElementById('toast');
+  const icon  = document.getElementById('toast-icon');
+  const msgEl = document.getElementById('toast-msg');
+  const icons = { ok: '✓', err: '✕', warn: '⚠' };
+  icon.textContent = icons[type] || 'ℹ';
+  msgEl.textContent = msg;
+  el.className = `toast show${type ? ' t-' + type : ''}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
 </script>
 </body>
